@@ -1,3 +1,19 @@
+# Environment variables
 .env
+backend_react/.env
+frontend_react/.env
+
+# Dependencies
 backend_react/node_modules/
 frontend_react/node_modules/
+
+# Build
+dist/
+frontend_react/dist/
+
+# Backup MongoDB
+backup/
+
+# Logs
+*.log
+npm-debug.log*
