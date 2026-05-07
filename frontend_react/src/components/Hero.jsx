@@ -1,3 +1,4 @@
+import photo from '../assets/photo.jpg'
 export default function Hero({ onExplorer }) {
   return (
     <section className="hero" id="hero">
@@ -65,7 +66,7 @@ export default function Hero({ onExplorer }) {
           <div className="hero-img-ring r1"></div>
           <div className="hero-img-ring r2"></div>
           <div className="hero-img-inner">
-            <img src="/src/assets/photo.jpg" alt="Khadim Mbaye" style={{width:'100%', height:'100%', objectFit:'cover', borderRadius:'50%'}} />
+            <img src={photo} alt="Khadim Mbaye" style={{width:'100%', height:'100%', objectFit:'cover', borderRadius:'50%'}} />
           </div>
         </div>
       </div>

@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+
+  frontend:
+    build:
+      context: ./frontend_react
+      args:
+        - VITE_API_URL=http://localhost:5001/api/projects
+    ports:
+      - "5175:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend_react
+    ports:
+      - "5001:5001"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/portfolio_db
+      - PORT=5001
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

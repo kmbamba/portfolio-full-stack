@@ -1,3 +1,4 @@
+import photo from '../assets/photo.jpg'
 export default function APropos() {
   const skills = [
     { cat: 'Cloud', items: ['AWS', 'Azure', 'GCP', 'Terraform'] },
@@ -18,7 +19,7 @@ export default function APropos() {
             <div className="apropos-photo-wrap">
               <div className="apropos-photo-ring"></div>
               <div className="apropos-photo">
-                <img src="/src/assets/photo.jpg" alt="Khadim Mbaye" style={{width:'100%', height:'100%', objectFit:'cover', borderRadius:'50%'}} />
+                <img src={photo} alt="Khadim Mbaye" style={{width:'100%', height:'100%', objectFit:'cover', borderRadius:'50%'}} />
               </div>
               <div className="apropos-photo-badge">
                 <span>☁</span> Cloud & DevOps
