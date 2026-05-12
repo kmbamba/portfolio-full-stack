@@ -8,14 +8,14 @@ services:
       args:
         - VITE_API_URL=http://localhost:5001/api/projects
     ports:
-      - "5175:80"
+      - "5176:80"
     depends_on:
       - backend
 
   backend:
     build: ./backend_react
     ports:
-      - "5001:5001"
+      - "5002:5001"
     environment:
       - MONGO_URI=mongodb://mongo:27017/portfolio_db
       - PORT=5001
