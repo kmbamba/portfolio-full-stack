@@ -40,9 +40,6 @@ pipeline {
                         def nodejsHome = tool 'nodejs'
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=portfolio-full-stack \
-                            -Dsonar.sources=. \
-                            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/.git/** \
                             -Dsonar.nodejs.executable=${nodejsHome}/bin/node
                          """
                     }
