@@ -8,7 +8,9 @@ const projectRoutes = require("./routes/projectRoutes");
 dotenv.config();
 
 // ── Connexion à MongoDB ──
-connectDB();
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
 
 // ── Initialiser Express ──
 const app = express();
@@ -48,7 +50,11 @@ app.use((err, req, res, next) => {
 });
 
 // ── Démarrer le serveur ──
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur le port ${PORT} [mode: ${process.env.NODE_ENV}]`);
-});
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Serveur démarré sur le port ${PORT} [mode: ${process.env.NODE_ENV}]`);
+  });
+}
+
+module.exports = app;
