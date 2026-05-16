@@ -1,6 +1,6 @@
 pipeline {
     agent any
-    
+
     tools {
         nodejs 'nodejs'
     }
@@ -37,12 +37,14 @@ pipeline {
                 withSonarQubeEnv('sonarqube') {
                     script {
                         def scannerHome = tool 'sonarqube-scanner'
+                        def nodejsHome = tool 'nodejs'
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=portfolio-full-stack \
                             -Dsonar.sources=. \
-                            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/.git/**
-                        """
+                            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/.git/** \
+                            -Dsonar.nodejs.executable=${nodejsHome}/bin/node
+                         """
                     }
                 }
             }
