@@ -31,12 +31,15 @@ pipeline {
        stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonarqube') {
-                    sh """
-                    /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/sonarqube-scanner/bin/sonar-scanner \
-                    -Dsonar.projectKey=portfolio-full-stack \
-                    -Dsonar.sources=. \
-                    -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/.git/**
-                    """
+                    script {
+                        def scannerHome = tool 'sonarqube-scanner'
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=portfolio-full-stack \
+                            -Dsonar.sources=. \
+                            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/.git/**
+                        """
+                    }
                 }
             }
         }
