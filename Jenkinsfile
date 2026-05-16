@@ -28,19 +28,18 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-        stage('SonarQube Analysis') {
-    steps {
-        withSonarQubeEnv('sonarqube') {
-            sh """
-                /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/sonarqube-scanner/bin/sonar-scanner \
-                -Dsonar.projectKey=portfolio-full-stack \
-                -Dsonar.sources=. \
-                -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/.git/**
-            """
+       stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonarqube') {
+                    sh """
+                    /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/sonarqube-scanner/bin/sonar-scanner \
+                    -Dsonar.projectKey=portfolio-full-stack \
+                    -Dsonar.sources=. \
+                    -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/.git/**
+                    """
+                }
+            }
         }
-    }
-}
 
         stage('Quality Gate') {
             steps {
