@@ -29,22 +29,18 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonarqube') {
-                    sh '''
-                        docker run --rm \
-                        --network host \
-                        -e SONAR_HOST_URL=http://localhost:9000 \
-                        -e SONAR_TOKEN=$SONAR_AUTH_TOKEN \
-                        -v $WORKSPACE:/usr/src \
-                        sonarsource/sonar-scanner-cli \
-                        -Dsonar.projectKey=portfolio-full-stack \
-                        -Dsonar.sources=. \
-                        -Dsonar.exclusions=**/node_modules/**,**/dist/**
-                    '''
-                }
-            }
+        stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv('sonarqube') {
+            sh """
+                /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/sonarqube-scanner/bin/sonar-scanner \
+                -Dsonar.projectKey=portfolio-full-stack \
+                -Dsonar.sources=. \
+                -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/.git/**
+            """
         }
+    }
+}
 
         stage('Quality Gate') {
             steps {
