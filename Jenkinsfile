@@ -31,6 +31,15 @@ pipeline {
                 }
             }
         }
+        stage('Test') {
+            steps {
+                echo 'Lancement des tests...'
+                dir('backend_react') {
+                    sh 'npm install'
+                    sh 'npm test'
+                }
+            }
+        }
 
        stage('SonarQube Analysis') {
             steps {
