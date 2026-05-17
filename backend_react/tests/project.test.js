@@ -11,13 +11,13 @@ beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   const uri = mongoServer.getUri();
   await mongoose.connect(uri);
-});
+}, 30000); // 30 secondes de timeout
 
 // Fermer la connexion après les tests
 afterAll(async () => {
   await mongoose.disconnect();
   await mongoServer.stop();
-});
+}, 30000);
 
 // Nettoyer la base entre chaque test
 afterEach(async () => {
