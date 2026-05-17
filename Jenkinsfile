@@ -48,11 +48,7 @@ pipeline {
                     script {
                         def scannerHome = tool 'sonarqube-scanner'
                         def nodejsHome = tool 'nodejs'
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.nodejs.executable=${nodejsHome}/bin/node
-                            -Dsonar.projectBaseDir=${WORKSPACE}
-                         """
+                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.nodejs.executable=${nodejsHome}/bin/node"
                     }
                 }
             }
