@@ -36,12 +36,14 @@ pipeline {
             steps {
                 echo 'Lancement des tests...'
                 dir('backend_react') {
-                    sh 'npm install'
-                    sh 'npm test -- --coverage'
-                    sh 'ls -la coverage/'
+                    withCredentials([string(credentialsId: 'mongo-test-uri', variable: 'MONGO_TEST_URI')]) {
+                        sh 'npm install'
+                        sh 'npm test -- --coverage'
+                        sh 'ls -la coverage/'
                 }
             }
         }
+    }
 
         stage('SonarQube Analysis') {
             steps {

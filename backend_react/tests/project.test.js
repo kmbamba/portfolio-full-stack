@@ -3,14 +3,17 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const app = require('../app');
 
-const TEST_DB_URI = 'mongodb+srv://Bamba:passer123@cluster0.topbtjf.mongodb.net/portfolio_test';
+const TEST_DB_URI = process.env.MONGO_TEST_URI || 'mongodb://localhost:27017/portfolio_test';
 
 beforeAll(async () => {
   await mongoose.connect(TEST_DB_URI);
 }, 30000);
 
 afterAll(async () => {
-  await mongoose.connection.dropDatabase();
+  const collections = mongoose.connection.collections;
+  for (const key in collections) {
+    await collections[key].deleteMany({});
+  }
   await mongoose.disconnect();
 }, 30000);
 
