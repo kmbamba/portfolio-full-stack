@@ -31,24 +31,27 @@ pipeline {
                 }
             }
         }
+
         stage('Test') {
             steps {
                 echo 'Lancement des tests...'
                 dir('backend_react') {
                     sh 'npm install'
-                    sh 'npm test || true'
+                    sh 'npm test'
                     sh 'ls -la coverage/ || echo "Dossier coverage absent"'
                 }
             }
         }
 
-       stage('SonarQube Analysis') {
+        stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonarqube') {
                     script {
                         def scannerHome = tool 'sonarqube-scanner'
-                        def nodejsHome = tool 'nodejs'
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.nodejs.executable=${nodejsHome}/bin/node"
+
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner
+                        """
                     }
                 }
             }
@@ -89,9 +92,9 @@ pipeline {
         success {
             echo '✅ Pipeline terminé avec succès !'
             mail(
-                to:      'kmbamba567@gmail.com',
+                to: 'kmbamba567@gmail.com',
                 subject: "✅ [Jenkins] Build #${env.BUILD_NUMBER} — Succès",
-                body:    """
+                body: """
 Bonjour,
 
 Votre pipeline s'est terminé avec succès !
@@ -103,12 +106,13 @@ Logs    : ${env.BUILD_URL}
                 """
             )
         }
+
         failure {
             echo '❌ Pipeline échoué !'
             mail(
-                to:      'kmbamba567@gmail.com',
+                to: 'kmbamba567@gmail.com',
                 subject: "❌ [Jenkins] Build #${env.BUILD_NUMBER} — Échec",
-                body:    """
+                body: """
 Bonjour,
 
 Votre pipeline a échoué. Merci de vérifier les logs.
