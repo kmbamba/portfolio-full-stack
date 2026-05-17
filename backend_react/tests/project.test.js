@@ -17,6 +17,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await mongoose.disconnect();
   await mongoServer.stop();
+  if (mongoServer) await mongoServer.stop();
 }, 30000);
 
 // Nettoyer la base entre chaque test
@@ -25,7 +26,7 @@ afterEach(async () => {
   for (const key in collections) {
     await collections[key].deleteMany();
   }
-});
+}, 15000); // 
 
 // ─── Tests createProject ───
 describe('POST /api/projects', () => {

@@ -37,6 +37,7 @@ pipeline {
                 echo 'Lancement des tests...'
                 dir('backend_react') {
                     sh 'npm install'
+                    sh 'npx mongodb-memory-server setup'
                     sh 'npm test -- --coverage'
                     sh 'ls -la coverage/'
                 }
