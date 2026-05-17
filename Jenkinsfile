@@ -51,6 +51,7 @@ pipeline {
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.nodejs.executable=${nodejsHome}/bin/node
+                            -Dsonar.projectBaseDir=${WORKSPACE}
                          """
                     }
                 }
