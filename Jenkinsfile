@@ -37,8 +37,8 @@ pipeline {
                 echo 'Lancement des tests...'
                 dir('backend_react') {
                     sh 'npm install'
-                    sh 'npm test'
-                    sh 'ls -la coverage/ || echo "Dossier coverage absent"'
+                    sh 'npm test -- --coverage'
+                    sh 'ls -la coverage/'
                 }
             }
         }
