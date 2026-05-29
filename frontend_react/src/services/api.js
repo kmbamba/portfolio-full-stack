@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'https://portfolio-backend-clmu.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://portfolio-backend-clmu.onrender.com/api/projects';
 // ── Fonction d'adaptation: Backend → Frontend ──
 function adaptProjetFromBackend(projetBackend) {
   return {
