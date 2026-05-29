@@ -41,7 +41,7 @@ export default function AjouterProjet({ onAjouter, onAnnuler }) {
       const nouveau = await addProjet(form)
       onAjouter(nouveau)
     } catch {
-      setErreur("Erreur lors de l'ajout. Vérifiez que le backend est lancé sur le port 5000.")
+      setErreur("Erreur lors de l'ajout du projet.")
     } finally {
       setLoading(false)
     }
