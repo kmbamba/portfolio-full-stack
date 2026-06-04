@@ -14,6 +14,39 @@ pipeline {
             }
         }
 
+        stage('Test') {
+            steps {
+                echo 'Lancement des tests...'
+                dir('backend_react') {
+                    withCredentials([string(credentialsId: 'mongo-test-uri', variable: 'MONGO_TEST_URI')]) {
+                        sh 'npm install'
+                        sh 'npm test -- --coverage'
+                        sh 'ls -la coverage/'
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonarqube') {
+                    script {
+                        def scannerHome = tool 'sonarqube-scanner'
+                        def nodejsHome = tool 'nodejs'
+                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.nodejs.executable=${nodejsHome}/bin/node"
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
         stage('Build Frontend') {
             steps {
                 echo 'Build image Frontend...'
@@ -28,41 +61,6 @@ pipeline {
                 echo 'Build image Backend...'
                 dir('backend_react') {
                     sh 'docker build -t khadim12/portfolio-backend:latest .'
-                }
-            }
-        }
-
-        stage('Test') {
-            steps {
-                echo 'Lancement des tests...'
-                dir('backend_react') {
-                    withCredentials([string(credentialsId: 'mongo-test-uri', variable: 'MONGO_TEST_URI')]) {
-                        sh 'npm install'
-                        sh 'npm test -- --coverage'
-                        sh 'ls -la coverage/'
-                }
-            }
-        }
-    }
-
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonarqube') {
-                    script {
-                        def scannerHome = tool 'sonarqube-scanner'
-
-                        sh """
-                            ${scannerHome}/bin/sonar-scanner
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
                 }
             }
         }
@@ -82,10 +80,19 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Docker') {
             steps {
-                echo 'Déploiement...'
+                echo 'Déploiement Docker Compose...'
                 sh 'docker-compose up -d --build'
+            }
+        }
+
+        stage('Deploy to K8s') {
+            steps {
+                echo 'Déploiement sur Kubernetes...'
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh 'kubectl apply -f k8s/ --kubeconfig=$KUBECONFIG'
+                }
             }
         }
     }
@@ -108,7 +115,6 @@ Logs    : ${env.BUILD_URL}
                 """
             )
         }
-
         failure {
             echo '❌ Pipeline échoué !'
             mail(
