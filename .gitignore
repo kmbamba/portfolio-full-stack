@@ -17,3 +17,4 @@ backup/
 # Logs
 *.log
 npm-debug.log*
+k8s/02-secret.yaml
