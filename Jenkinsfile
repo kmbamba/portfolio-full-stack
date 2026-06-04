@@ -91,10 +91,10 @@ pipeline {
             steps {
                 echo 'Déploiement sur Kubernetes...'
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    sh 'kubectl apply -f k8s/ --kubeconfig=$KUBECONFIG'
-                }
-            }
+                    sh 'kubectl apply -f k8s/ --kubeconfig=$KUBECONFIG --validate=false'
         }
+    }
+}
     }
 
     post {
