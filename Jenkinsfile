@@ -14,8 +14,6 @@ pipeline {
             }
         }
 
-       
-
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonarqube') {
@@ -69,53 +67,48 @@ pipeline {
             }
         }
 
-        stage('Deploy Docker') {
-            steps {
-                echo 'Déploiement Docker Compose...'
-                sh 'docker-compose up -d --build'
-            }
-        }
-
         stage('Deploy to K8s') {
+            environment {
+                K8S_TOKEN = credentials('k8s-token')
+                K8S_URL = 'https://192.168.49.2:8443'
+                MONGO_URI = credentials('mongo-test-uri')
+            }
             steps {
-                echo '⏳ Déploiement K8s sera activé avec EKS/Terraform...'
+                echo 'Déploiement sur Kubernetes...'
+                sh '''
+                    kubectl apply -f k8s/00-namespace.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
+                    kubectl apply -f k8s/01-configmap.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
+
+                    kubectl create secret generic backend-secret \
+                      --from-literal=MONGO_URI="$MONGO_URI" \
+                      --namespace=portfolio \
+                      --server=$K8S_URL \
+                      --token=$K8S_TOKEN \
+                      --insecure-skip-tls-verify=true \
+                      --dry-run=client -o yaml | kubectl apply -f - \
+                      --server=$K8S_URL \
+                      --token=$K8S_TOKEN \
+                      --insecure-skip-tls-verify=true
+
+                    kubectl apply -f k8s/03-backend-deployment.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
+                    kubectl apply -f k8s/04-frontend-deployment.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
+                    kubectl apply -f k8s/05-mongo-statefulset.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
+                    kubectl apply -f k8s/06-ingress.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
+                    kubectl apply -f k8s/07-jenkins-sa.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
+
+                    kubectl rollout status deployment/frontend-deployment -n portfolio --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
+                    kubectl rollout status deployment/backend-deployment -n portfolio --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
+                '''
             }
         }
     }
 
-//     post {
-//         success {
-//             echo '✅ Pipeline terminé avec succès !'
-//             mail(
-//                 to: 'kmbamba567@gmail.com',
-//                 subject: "✅ [Jenkins] Build #${env.BUILD_NUMBER} — Succès",
-//                 body: """
-// Bonjour,
-
-// Votre pipeline s'est terminé avec succès !
-
-// Job     : ${env.JOB_NAME}
-// Build   : #${env.BUILD_NUMBER}
-// Durée   : ${currentBuild.durationString}
-// Logs    : ${env.BUILD_URL}
-//                 """
-//             )
-//         }
-//         failure {
-//             echo '❌ Pipeline échoué !'
-//             mail(
-//                 to: 'kmbamba567@gmail.com',
-//                 subject: "❌ [Jenkins] Build #${env.BUILD_NUMBER} — Échec",
-//                 body: """
-// Bonjour,
-
-// Votre pipeline a échoué. Merci de vérifier les logs.
-
-// Job     : ${env.JOB_NAME}
-// Build   : #${env.BUILD_NUMBER}
-// Logs    : ${env.BUILD_URL}
-//                 """
-//             )
-//         }
-//     }
+    post {
+        success {
+            echo '✅ Pipeline terminé avec succès !'
+        }
+        failure {
+            echo '❌ Pipeline échoué !'
+        }
+    }
 }
