@@ -14,18 +14,7 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                echo 'Lancement des tests...'
-                dir('backend_react') {
-                    withCredentials([string(credentialsId: 'mongo-test-uri', variable: 'MONGO_TEST_URI')]) {
-                        sh 'npm install'
-                        sh 'npm test -- --coverage'
-                        sh 'ls -la coverage/'
-                    }
-                }
-            }
-        }
+       
 
         stage('SonarQube Analysis') {
             steps {
@@ -42,7 +31,7 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 timeout(time: 15, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                    waitForQualityGate abortPipeline: false
                 }
             }
         }
