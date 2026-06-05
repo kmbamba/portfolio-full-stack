@@ -89,10 +89,7 @@ pipeline {
 
         stage('Deploy to K8s') {
             steps {
-                echo 'Déploiement sur Kubernetes...'
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    sh 'kubectl apply -f k8s/ --kubeconfig=$KUBECONFIG --validate=false'
-                }
+                echo '⏳ Déploiement K8s sera activé avec EKS/Terraform...'
             }
         }
     }
