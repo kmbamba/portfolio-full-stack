@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins-deployer
+  namespace: portfolio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jenkins-deployer-role
+rules:
+- apiGroups: ["", "apps", "networking.k8s.io"]
+  resources: ["namespaces", "deployments", "services", "pods", "ingresses", "secrets", "configmaps", "statefulsets"]
+  verbs: ["get", "list", "create", "update", "patch", "apply", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins-deployer-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: jenkins-deployer-role
+subjects:
+- kind: ServiceAccount
+  name: jenkins-deployer
+  namespace: portfolio
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jenkins-deployer-token
+  namespace: portfolio
+  annotations:
+    kubernetes.io/service-account.name: jenkins-deployer
+type: kubernetes.io/service-account-token
