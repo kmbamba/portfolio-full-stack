@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://portfolio.k8s/api/projects';
+const API_URL = import.meta.env.VITE_API_URL || 'http://172.23.78.58:5001/api/projects';
 // ── Fonction d'adaptation: Backend → Frontend ──
 function adaptProjetFromBackend(projetBackend) {
   return {
