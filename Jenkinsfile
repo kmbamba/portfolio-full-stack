@@ -104,11 +104,38 @@ pipeline {
     }
 
     post {
-        success {
-            echo '✅ Pipeline terminé avec succès !'
-        }
-        failure {
-            echo '❌ Pipeline échoué !'
-        }
+    success {
+        echo '✅ Pipeline terminé avec succès !'
+        mail(
+            to: 'kmbamba567@gmail.com',
+            subject: "✅ [Jenkins] Build #${env.BUILD_NUMBER} — Succès",
+            body: """
+Bonjour,
+
+Votre pipeline s'est terminé avec succès !
+
+Job     : ${env.JOB_NAME}
+Build   : #${env.BUILD_NUMBER}
+Durée   : ${currentBuild.durationString}
+Logs    : ${env.BUILD_URL}
+            """
+        )
     }
+    failure {
+        echo '❌ Pipeline échoué !'
+        mail(
+            to: 'kmbamba567@gmail.com',
+            subject: "❌ [Jenkins] Build #${env.BUILD_NUMBER} — Échec",
+            body: """
+Bonjour,
+
+Votre pipeline a échoué. Merci de vérifier les logs.
+
+Job     : ${env.JOB_NAME}
+Build   : #${env.BUILD_NUMBER}
+Logs    : ${env.BUILD_URL}
+            """
+        )
+    }
+}
 }
