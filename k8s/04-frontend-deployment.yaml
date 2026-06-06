@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: khadim12/portfolio-frontend:k8s
+        image: khadim12/portfolio-frontend:latest
         ports:
         - containerPort: 80
         resources:
