@@ -94,7 +94,7 @@ pipeline {
                     kubectl apply -f k8s/04-frontend-deployment.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
                     kubectl apply -f k8s/05-mongo-statefulset.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
                     kubectl apply -f k8s/06-ingress.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-                    kubectl apply -f k8s/07-jenkins-sa.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
+                    
 
                     kubectl rollout status deployment/frontend-deployment -n portfolio --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
                     kubectl rollout status deployment/backend-deployment -n portfolio --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
