@@ -38,7 +38,7 @@ pipeline {
             steps {
                 echo 'Build image Frontend...'
                 dir('frontend_react') {
-                    sh 'docker build -t khadim12/portfolio-frontend:latest .'
+                    sh 'docker build --no-cache -t khadim12/portfolio-frontend:latest .'
                 }
             }
         }
