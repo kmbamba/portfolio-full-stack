@@ -67,49 +67,43 @@ pipeline {
             }
         }
 
-        stage('Deploy to K8s') {
+        stage('Terraform Infrastructure') {
             environment {
-                K8S_TOKEN = credentials('k8s-token')
-                K8S_URL = 'https://192.168.49.2:8443'
+                AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
+                AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+            }
+            steps {
+                echo 'Création infrastructure AWS (VPC + EC2)...'
+                dir('terraform') {
+                    sh 'terraform init'
+                    sh 'terraform plan'
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Terraform K8s Deploy') {
+            environment {
                 MONGO_URI = credentials('mongo-test-uri')
             }
             steps {
-                echo 'Déploiement sur Kubernetes...'
-                sh '''
-                    kubectl apply -f k8s/00-namespace.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-                    kubectl apply -f k8s/01-configmap.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-
-                    kubectl create secret generic backend-secret \
-                      --from-literal=MONGO_URI="$MONGO_URI" \
-                      --namespace=portfolio \
-                      --server=$K8S_URL \
-                      --token=$K8S_TOKEN \
-                      --insecure-skip-tls-verify=true \
-                      --dry-run=client -o yaml | kubectl apply -f - \
-                      --server=$K8S_URL \
-                      --token=$K8S_TOKEN \
-                      --insecure-skip-tls-verify=true
-
-                    kubectl apply -f k8s/03-backend-deployment.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-                    kubectl apply -f k8s/04-frontend-deployment.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-                    kubectl apply -f k8s/05-mongo-statefulset.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-                    kubectl apply -f k8s/06-ingress.yaml --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-                    
-
-                    kubectl rollout status deployment/frontend-deployment -n portfolio --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-                    kubectl rollout status deployment/backend-deployment -n portfolio --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-                '''
+                echo 'Déploiement app sur Kubernetes avec Terraform...'
+                dir('terraform/k8s-deploy') {
+                    sh 'terraform init'
+                    sh 'terraform plan -var="mongo_uri=$MONGO_URI"'
+                    sh 'terraform apply -auto-approve -var="mongo_uri=$MONGO_URI"'
+                }
             }
         }
     }
 
     post {
-    success {
-        echo '✅ Pipeline terminé avec succès !'
-        mail(
-            to: 'kmbamba567@gmail.com',
-            subject: "✅ [Jenkins] Build #${env.BUILD_NUMBER} — Succès",
-            body: """
+        success {
+            echo '✅ Pipeline terminé avec succès !'
+            mail(
+                to: 'kmbamba567@gmail.com',
+                subject: "✅ [Jenkins] Build #${env.BUILD_NUMBER} — Succès",
+                body: """
 Bonjour,
 
 Votre pipeline s'est terminé avec succès !
@@ -118,15 +112,15 @@ Job     : ${env.JOB_NAME}
 Build   : #${env.BUILD_NUMBER}
 Durée   : ${currentBuild.durationString}
 Logs    : ${env.BUILD_URL}
-            """
-        )
-    }
-    failure {
-        echo '❌ Pipeline échoué !'
-        mail(
-            to: 'kmbamba567@gmail.com',
-            subject: "❌ [Jenkins] Build #${env.BUILD_NUMBER} — Échec",
-            body: """
+                """
+            )
+        }
+        failure {
+            echo '❌ Pipeline échoué !'
+            mail(
+                to: 'kmbamba567@gmail.com',
+                subject: "❌ [Jenkins] Build #${env.BUILD_NUMBER} — Échec",
+                body: """
 Bonjour,
 
 Votre pipeline a échoué. Merci de vérifier les logs.
@@ -134,8 +128,8 @@ Votre pipeline a échoué. Merci de vérifier les logs.
 Job     : ${env.JOB_NAME}
 Build   : #${env.BUILD_NUMBER}
 Logs    : ${env.BUILD_URL}
-            """
-        )
+                """
+            )
+        }
     }
-}
 }
