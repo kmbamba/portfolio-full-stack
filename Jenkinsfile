@@ -67,20 +67,6 @@ pipeline {
             }
         }
 
-        stage('Terraform Infrastructure') {
-            environment {
-                AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
-                AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-            }
-            steps {
-                echo 'Création infrastructure AWS (VPC + EC2)...'
-                dir('terraform') {
-                    sh 'terraform init'
-                    sh 'terraform plan'
-                    sh 'terraform apply -auto-approve'
-                }
-            }
-        }
 
         stage('Terraform K8s Deploy') {
             environment {
