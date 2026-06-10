@@ -85,13 +85,14 @@ pipeline {
         stage('Terraform K8s Deploy') {
             environment {
                 MONGO_URI = credentials('mongo-test-uri')
+                K8S_TOKEN = credentials('k8s-token')
             }
             steps {
                 echo 'Déploiement app sur Kubernetes avec Terraform...'
                 dir('terraform/k8s-deploy') {
                     sh 'terraform init'
-                    sh 'terraform plan -var="mongo_uri=$MONGO_URI"'
-                    sh 'terraform apply -auto-approve -var="mongo_uri=$MONGO_URI"'
+                    sh 'terraform plan -var="mongo_uri=$MONGO_URI" -var="k8s_token=$K8S_TOKEN"'
+                    sh 'terraform apply -auto-approve -var="mongo_uri=$MONGO_URI" -var="k8s_token=$K8S_TOKEN"'
                 }
             }
         }

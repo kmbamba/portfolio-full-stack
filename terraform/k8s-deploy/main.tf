@@ -9,8 +9,9 @@ terraform {
 }
 
 provider "kubernetes" {
-  config_path    = "~/.kube/config"
-  config_context = "minikube"
+  host     = "https://192.168.49.2:8443"
+  token    = var.k8s_token
+  insecure = true
 }
 
 # Namespace

@@ -3,3 +3,8 @@ variable "mongo_uri" {
   type        = string
   sensitive   = true
 }
+variable "k8s_token" {
+  description = "Kubernetes ServiceAccount Token"
+  type        = string
+  sensitive   = true
+}
