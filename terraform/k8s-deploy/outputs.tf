@@ -1,6 +1,6 @@
 output "namespace" {
   description = "Namespace Kubernetes"
-  value       = kubernetes_namespace.portfolio.metadata[0].name
+  value       = "portfolio"
 }
 
 output "backend_service" {
