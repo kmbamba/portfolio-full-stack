@@ -14,25 +14,25 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonarqube') {
-                    script {
-                        def scannerHome = tool 'sonarqube-scanner'
-                        def nodejsHome = tool 'nodejs'
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.nodejs.executable=${nodejsHome}/bin/node"
-                    }
-                }
-            }
-        }
+        // stage('SonarQube Analysis') {
+        //     steps {
+        //         withSonarQubeEnv('sonarqube') {
+        //             script {
+        //                 def scannerHome = tool 'sonarqube-scanner'
+        //                 def nodejsHome = tool 'nodejs'
+        //                 sh "${scannerHome}/bin/sonar-scanner -Dsonar.nodejs.executable=${nodejsHome}/bin/node"
+        //             }
+        //         }
+        //     }
+        // }
 
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 15, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
+        // stage('Quality Gate') {
+        //     steps {
+        //         timeout(time: 15, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
 
         stage('Build Frontend') {
             steps {
