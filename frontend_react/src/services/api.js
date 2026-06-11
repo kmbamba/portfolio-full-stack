@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://172.23.78.58:5001/api/projects';
+const API_URL = import.meta.env.VITE_API_URL || 'http://a35a1f222c2c24b81b4be985a6c370a7-20156430.us-east-1.elb.amazonaws.com/api/projects';
 // ── Fonction d'adaptation: Backend → Frontend ──
 function adaptProjetFromBackend(projetBackend) {
   return {
