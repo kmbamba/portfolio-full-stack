@@ -1,4 +1,4 @@
-# 🚀 Pipeline DevOps Complet — Jenkins + SonarQube + Docker + Kubernetes
+# 🚀 Pipeline DevOps Complet — Jenkins + SonarQube + Docker + Kubernetes + Terraform + AWS EKS
 
 ## 📋 Table des matières
 1. [Architecture globale](#architecture-globale)
@@ -9,11 +9,15 @@
 6. [Docker Hub](#docker-hub)
 7. [Kubernetes (Minikube)](#kubernetes-minikube)
 8. [Pipeline Jenkins (Jenkinsfile)](#pipeline-jenkins)
-9. [Webhook GitHub](#webhook-github)
-10. [Notifications Email](#notifications-email)
-11. [Workflow complet](#workflow-complet)
-12. [Commandes utiles](#commandes-utiles)
-13. [Reproduire pour un autre projet](#reproduire-pour-un-autre-projet)
+9. [Terraform — Concepts](#terraform--concepts)
+10. [Terraform — VPC + EC2](#terraform--vpc--ec2)
+11. [Terraform — K8s Deploy (Minikube)](#terraform--k8s-deploy-minikube)
+12. [Terraform — EKS (AWS)](#terraform--eks-aws)
+13. [Webhook GitHub](#webhook-github)
+14. [Notifications Email](#notifications-email)
+15. [Workflow complet](#workflow-complet)
+16. [Commandes utiles](#commandes-utiles)
+17. [Checklist redémarrage](#checklist-redémarrage)
 
 ---
 
@@ -28,7 +32,7 @@ SonarQube Analysis + Quality Gate (port 9001)
     ↓
 Docker Build & Push (Docker Hub)
     ↓
-Kubernetes Deploy (Minikube)
+Terraform K8s Deploy (Minikube local)
     ↓
 Email Notification
 ```
@@ -40,8 +44,9 @@ Email Notification
 | SonarQube | Qualité du code | 9001 |
 | Docker | Build & Registry | - |
 | Minikube | Kubernetes local | - |
+| Terraform | Infrastructure as Code | - |
+| AWS EKS | Kubernetes cloud | - |
 | MongoDB Atlas | Base de données cloud | - |
-| ngrok | Exposition Jenkins publique | - |
 
 ---
 
@@ -50,9 +55,12 @@ Email Notification
 - WSL2 (Ubuntu) installé
 - Docker installé dans WSL2
 - Minikube installé dans WSL2
+- Terraform installé dans WSL2
+- AWS CLI installé et configuré
 - Compte GitHub
 - Compte Docker Hub
 - Compte MongoDB Atlas
+- Compte AWS (Free Tier)
 - Compte ngrok
 
 ---
@@ -96,21 +104,16 @@ docker run -d \
 ## ⚙️ Jenkins
 
 ### Plugins à installer
-- Git
-- Pipeline
-- NodeJS
-- SonarQube Scanner
-- Kubernetes CLI
-- Email Extension
+- Git, Pipeline, NodeJS, SonarQube Scanner, Email Extension
 
 ### Credentials à configurer
-**Manage Jenkins → Credentials → Add**
-
 | ID | Type | Valeur |
 |----|------|--------|
 | `dockerhub-credentials` | Username/Password | Docker Hub login |
 | `k8s-token` | Secret text | Token ServiceAccount K8s |
 | `mongo-test-uri` | Secret text | MongoDB Atlas URI |
+| `aws-access-key` | Secret text | AWS Access Key ID |
+| `aws-secret-key` | Secret text | AWS Secret Access Key |
 
 ### Configuration SonarQube dans Jenkins
 **Manage Jenkins → System → SonarQube servers**
@@ -119,12 +122,6 @@ docker run -d \
 |-------|--------|
 | Name | `sonarqube` |
 | URL | `http://sonarqube:9000` |
-| Token | Token généré dans SonarQube |
-
-### Tools à configurer
-**Manage Jenkins → Tools**
-- NodeJS → `nodejs`
-- SonarQube Scanner → `sonarqube-scanner`
 
 ---
 
@@ -138,12 +135,10 @@ docker run -d \
 | Name | Jenkins |
 | URL | `http://jenkins:8080/sonarqube-webhook/` |
 
-> ⚠️ Utiliser le nom du conteneur et le port interne (8080, pas 8082)
-
-### Fichier `sonar-project.properties`
+### `sonar-project.properties`
 ```properties
-sonar.projectKey=mon-projet
-sonar.projectName=Mon Projet
+sonar.projectKey=portfolio-full-stack
+sonar.projectName=Portfolio Full Stack
 sonar.projectVersion=1.0
 sonar.host.url=http://sonarqube:9000
 sonar.sources=backend_react
@@ -154,102 +149,29 @@ sonar.working.directory=.scannerwork
 
 ---
 
-## 🐋 Docker Hub
-
-### Structure des images
-```
-khadim12/portfolio-frontend:latest
-khadim12/portfolio-backend:latest
-```
-
-### Build et Push manuel (si besoin)
-```bash
-docker build -t khadim12/mon-projet-frontend:latest ./frontend
-docker build -t khadim12/mon-projet-backend:latest ./backend
-docker push khadim12/mon-projet-frontend:latest
-docker push khadim12/mon-projet-backend:latest
-```
-
----
-
 ## ☸️ Kubernetes (Minikube)
 
 ### Démarrer Minikube
 ```bash
-minikube start --driver=docker
+minikube start --driver=docker --memory=2048
 minikube addons enable ingress
+minikube ssh -- "echo 'nameserver 8.8.8.8' | sudo tee /etc/resolv.conf"
 ```
 
-### Structure des fichiers K8s
-```
-k8s/
-├── 00-namespace.yaml          # Namespace dédié
-├── 01-configmap.yaml          # Variables d'environnement
-├── 02-secret.yaml             # Secrets (gitignored)
-├── 03-backend-deployment.yaml # Déploiement backend
-├── 04-frontend-deployment.yaml# Déploiement frontend
-├── 05-mongo-statefulset.yaml  # MongoDB StatefulSet
-├── 06-ingress.yaml            # Ingress nginx
-└── 07-jenkins-sa.yaml         # ServiceAccount Jenkins
-```
-
-### ServiceAccount Jenkins (authentification sans kubeconfig)
-```yaml
-# 07-jenkins-sa.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: jenkins-deployer
-  namespace: mon-namespace
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: jenkins-deployer-role
-rules:
-- apiGroups: ["", "apps", "networking.k8s.io"]
-  resources: ["namespaces", "deployments", "services", "pods",
-              "ingresses", "secrets", "configmaps", "statefulsets"]
-  verbs: ["get", "list", "create", "update", "patch", "apply", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: jenkins-deployer-binding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: jenkins-deployer-role
-subjects:
-- kind: ServiceAccount
-  name: jenkins-deployer
-  namespace: mon-namespace
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: jenkins-deployer-token
-  namespace: mon-namespace
-  annotations:
-    kubernetes.io/service-account.name: jenkins-deployer
-type: kubernetes.io/service-account-token
-```
-
-### Récupérer le token K8s pour Jenkins
+### Créer namespace + ServiceAccount (après chaque redémarrage)
 ```bash
+kubectl create namespace portfolio
 kubectl apply -f k8s/07-jenkins-sa.yaml
-kubectl get secret jenkins-deployer-token -n mon-namespace \
+
+# Récupérer le token pour Jenkins
+kubectl get secret jenkins-deployer-token -n portfolio \
   -o jsonpath='{.data.token}' | base64 -d
 ```
-→ Copiez ce token dans Jenkins Credentials (`k8s-token`)
 
 ### Accéder à l'application en local
 ```bash
-# Terminal 1
-kubectl port-forward -n mon-namespace service/frontend-service 8080:80 --address=0.0.0.0
-
-# Terminal 2
-kubectl port-forward -n mon-namespace service/backend-service 5001:5001 --address=0.0.0.0
+kubectl port-forward -n portfolio service/frontend-service 8080:80 --address=0.0.0.0 &
+kubectl port-forward -n portfolio service/backend-service 5001:5001 --address=0.0.0.0 &
 ```
 
 ---
@@ -259,16 +181,11 @@ kubectl port-forward -n mon-namespace service/backend-service 5001:5001 --addres
 ```groovy
 pipeline {
     agent any
-
-    tools {
-        nodejs 'nodejs'
-    }
+    tools { nodejs 'nodejs' }
 
     stages {
-
         stage('Clone') {
             steps {
-                echo 'Clonage du repo...'
                 checkout scm
             }
         }
@@ -296,18 +213,16 @@ pipeline {
 
         stage('Build Frontend') {
             steps {
-                echo 'Build image Frontend...'
                 dir('frontend_react') {
-                    sh 'docker build --no-cache -t MON_DOCKERHUB/mon-frontend:latest .'
+                    sh 'docker build --no-cache -t khadim12/portfolio-frontend:latest .'
                 }
             }
         }
 
         stage('Build Backend') {
             steps {
-                echo 'Build image Backend...'
                 dir('backend_react') {
-                    sh 'docker build --no-cache -t MON_DOCKERHUB/mon-backend:latest .'
+                    sh 'docker build -t khadim12/portfolio-backend:latest .'
                 }
             }
         }
@@ -320,88 +235,40 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    sh 'docker push MON_DOCKERHUB/mon-frontend:latest'
-                    sh 'docker push MON_DOCKERHUB/mon-backend:latest'
+                    sh 'docker push khadim12/portfolio-frontend:latest'
+                    sh 'docker push khadim12/portfolio-backend:latest'
                 }
             }
         }
 
-        stage('Deploy to K8s') {
+        stage('Terraform K8s Deploy') {
             environment {
-                K8S_TOKEN = credentials('k8s-token')
-                K8S_URL = 'https://192.168.49.2:8443'
                 MONGO_URI = credentials('mongo-test-uri')
+                K8S_TOKEN = credentials('k8s-token')
             }
             steps {
-                echo 'Déploiement sur Kubernetes...'
-                sh '''
-                    kubectl apply -f k8s/00-namespace.yaml \
-                      --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-
-                    kubectl apply -f k8s/01-configmap.yaml \
-                      --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-
-                    kubectl create secret generic backend-secret \
-                      --from-literal=MONGO_URI="$MONGO_URI" \
-                      --namespace=mon-namespace \
-                      --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true \
-                      --dry-run=client -o yaml | kubectl apply -f - \
-                      --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-
-                    kubectl apply -f k8s/03-backend-deployment.yaml \
-                      --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-
-                    kubectl apply -f k8s/04-frontend-deployment.yaml \
-                      --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-
-                    kubectl apply -f k8s/05-mongo-statefulset.yaml \
-                      --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-
-                    kubectl apply -f k8s/06-ingress.yaml \
-                      --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-
-                    kubectl rollout status deployment/frontend-deployment -n mon-namespace \
-                      --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-
-                    kubectl rollout status deployment/backend-deployment -n mon-namespace \
-                      --server=$K8S_URL --token=$K8S_TOKEN --insecure-skip-tls-verify=true
-                '''
+                dir('terraform/k8s-deploy') {
+                    sh 'terraform init'
+                    sh 'terraform plan -var="mongo_uri=$MONGO_URI" -var="k8s_token=$K8S_TOKEN"'
+                    sh 'terraform apply -auto-approve -var="mongo_uri=$MONGO_URI" -var="k8s_token=$K8S_TOKEN"'
+                }
             }
         }
     }
 
     post {
         success {
-            echo '✅ Pipeline terminé avec succès !'
             mail(
-                to: 'votre-email@gmail.com',
+                to: 'kmbamba567@gmail.com',
                 subject: "✅ [Jenkins] Build #${env.BUILD_NUMBER} — Succès",
-                body: """
-Bonjour,
-
-Votre pipeline s'est terminé avec succès !
-
-Job     : ${env.JOB_NAME}
-Build   : #${env.BUILD_NUMBER}
-Durée   : ${currentBuild.durationString}
-Logs    : ${env.BUILD_URL}
-                """
+                body: "Pipeline terminé avec succès !\nJob: ${env.JOB_NAME}\nBuild: #${env.BUILD_NUMBER}\nLogs: ${env.BUILD_URL}"
             )
         }
         failure {
-            echo '❌ Pipeline échoué !'
             mail(
-                to: 'votre-email@gmail.com',
+                to: 'kmbamba567@gmail.com',
                 subject: "❌ [Jenkins] Build #${env.BUILD_NUMBER} — Échec",
-                body: """
-Bonjour,
-
-Votre pipeline a échoué. Merci de vérifier les logs.
-
-Job     : ${env.JOB_NAME}
-Build   : #${env.BUILD_NUMBER}
-Logs    : ${env.BUILD_URL}
-                """
+                body: "Pipeline échoué !\nJob: ${env.JOB_NAME}\nBuild: #${env.BUILD_NUMBER}\nLogs: ${env.BUILD_URL}"
             )
         }
     }
@@ -410,27 +277,209 @@ Logs    : ${env.BUILD_URL}
 
 ---
 
+## 🏗️ Terraform — Concepts
+
+| Concept | Rôle | Fichier |
+|---------|------|---------|
+| **Provider** | Connexion AWS | `main.tf` |
+| **Resource** | Crée des ressources | `main.tf` |
+| **Module** | Code réutilisable | `modules/` |
+| **State** | Mémoire de Terraform | `terraform.tfstate` |
+| **Data Source** | Lit des infos existantes | `main.tf` |
+| **Variables** | Paramètres | `variables.tf` |
+| **Output** | Affiche résultats | `outputs.tf` |
+
+### Commandes essentielles
+```bash
+terraform init     # Télécharge les providers
+terraform plan     # Prévisualise les changements
+terraform apply    # Crée l'infrastructure
+terraform destroy  # Supprime tout
+terraform state list # Liste les ressources
+```
+
+---
+
+## 🏗️ Terraform — VPC + EC2
+
+### Structure
+```
+terraform/
+├── main.tf          # Provider + Data Sources + Modules
+├── variables.tf     # Variables
+├── outputs.tf       # Outputs
+└── modules/
+    ├── vpc/         # Module VPC
+    └── ec2/         # Module EC2
+```
+
+### Utilisation
+```bash
+cd terraform/
+terraform init
+terraform plan
+terraform apply    # Crée VPC + EC2 sur AWS
+terraform destroy  # Supprime après présentation
+```
+
+### Outputs
+```
+vpc_id          = "vpc-xxx"
+subnet_id       = "subnet-xxx"
+ec2_instance_id = "i-xxx"
+ec2_public_ip   = "x.x.x.x"
+```
+
+---
+
+## 🏗️ Terraform — K8s Deploy (Minikube)
+
+### Rôle
+Déploie l'application sur Minikube via le provider Kubernetes Terraform.
+
+### Ce que Terraform crée
+```
+✅ ConfigMap (variables d'environnement)
+✅ Secret (MongoDB URI)
+✅ Deployment Backend (x2 pods)
+✅ Deployment Frontend (x2 pods)
+✅ Service Backend (ClusterIP)
+✅ Service Frontend (ClusterIP)
+```
+
+### Utilisation manuelle
+```bash
+cd terraform/k8s-deploy/
+terraform init
+terraform apply \
+  -var="mongo_uri=mongodb+srv://..." \
+  -var="k8s_token=eyJ..."
+```
+
+### Dans Jenkins (automatique)
+```groovy
+stage('Terraform K8s Deploy') {
+    environment {
+        MONGO_URI = credentials('mongo-test-uri')
+        K8S_TOKEN = credentials('k8s-token')
+    }
+    steps {
+        dir('terraform/k8s-deploy') {
+            sh 'terraform apply -auto-approve \
+              -var="mongo_uri=$MONGO_URI" \
+              -var="k8s_token=$K8S_TOKEN"'
+        }
+    }
+}
+```
+
+### Différence avec kubectl apply
+| | kubectl apply | Terraform K8s |
+|---|---|---|
+| **Commandes** | 7 fichiers séparés | 1 commande |
+| **State** | Non | Oui |
+| **Plan** | Non | Oui |
+| **Destroy** | Manuel | `terraform destroy` |
+
+---
+
+## ☁️ Terraform — EKS (AWS)
+
+### Rôle
+Crée un vrai cluster Kubernetes managé sur AWS.
+
+### Structure
+```
+terraform/eks/
+├── main.tf       # EKS Cluster + Node Group + IAM
+├── variables.tf  # Variables
+└── outputs.tf    # Cluster endpoint + nom
+```
+
+### Ce que Terraform crée
+```
+✅ VPC + 2 Subnets (2 AZ différentes)
+✅ Internet Gateway + Route Tables
+✅ IAM Role Cluster EKS
+✅ IAM Role Node Group
+✅ EKS Cluster
+✅ Node Group (2x t3.small)
+```
+
+### Utilisation
+```bash
+# Créer le cluster (~15 minutes)
+cd terraform/eks/
+terraform init
+terraform apply -auto-approve
+
+# Configurer kubectl
+aws eks update-kubeconfig \
+  --region us-east-1 \
+  --name portfolio-eks
+
+# Vérifier les nodes
+kubectl get nodes
+
+# Déployer l'application
+cd ~/portfolio-full-stack
+kubectl create namespace portfolio
+kubectl create secret generic backend-secret \
+  --from-literal=MONGO_URI="mongodb+srv://..." \
+  --namespace=portfolio
+kubectl apply -f k8s/
+
+# Exposer avec Load Balancer
+kubectl patch svc frontend-service -n portfolio \
+  -p '{"spec": {"type": "LoadBalancer"}}'
+kubectl patch svc backend-service -n portfolio \
+  -p '{"spec": {"type": "LoadBalancer"}}'
+
+# Récupérer l'URL publique
+kubectl get svc -n portfolio
+
+# ⚠️ APRÈS LA PRÉSENTATION - OBLIGATOIRE
+terraform destroy -auto-approve
+```
+
+### Outputs
+```
+cluster_name     = "portfolio-eks"
+cluster_endpoint = "https://xxx.gr7.us-east-1.eks.amazonaws.com"
+cluster_region   = "us-east-1"
+```
+
+### Différence Minikube vs EKS
+| | Minikube | EKS AWS |
+|---|---|---|
+| **Environnement** | Local WSL2 | Cloud AWS |
+| **Accès** | port-forward | URL publique Load Balancer |
+| **Coût** | Gratuit | ~$1/heure |
+| **DNS** | Manuel | Automatique |
+| **Usage** | Dev/Demo | Production |
+
+---
+
 ## 🔔 Webhook GitHub
 
-### Prérequis — Exposer Jenkins avec ngrok
+### Exposer Jenkins avec ngrok
 ```powershell
-# Dans PowerShell Windows
+# PowerShell Windows
 cd C:\Users\hp\Downloads\ngrok-v3-stable-windows-amd64
 .\ngrok.exe http 8082
 ```
-→ Récupérez l'URL publique : `https://abc123.ngrok.io`
 
 ### Configurer dans GitHub
 **Repo → Settings → Webhooks → Add webhook**
 
 | Champ | Valeur |
 |-------|--------|
-| Payload URL | `https://abc123.ngrok.io/github-webhook/` |
+| Payload URL | `https://xxx.ngrok.io/github-webhook/` |
 | Content type | `application/json` |
 | Events | Just the push event |
 
 ### Configurer dans Jenkins
-**pipeline → Configure → Build Triggers**
+**Pipeline → Configure → Build Triggers**
 ✅ **GitHub hook trigger for GITScm polling**
 
 ---
@@ -438,8 +487,7 @@ cd C:\Users\hp\Downloads\ngrok-v3-stable-windows-amd64
 ## 📧 Notifications Email
 
 ### Configuration Gmail
-1. **Google Account → Sécurité → Validation en 2 étapes → Mots de passe des applications**
-2. Générez un mot de passe pour "Jenkins"
+**Google Account → Sécurité → Mots de passe des applications**
 
 ### Configuration Jenkins
 **Manage Jenkins → System → E-mail Notification**
@@ -449,33 +497,25 @@ cd C:\Users\hp\Downloads\ngrok-v3-stable-windows-amd64
 | SMTP server | `smtp.gmail.com` |
 | Port | `465` |
 | Use SSL | ✅ |
-| Username | `votre-email@gmail.com` |
-| Password | mot de passe application |
 
 ---
 
 ## 🔄 Workflow complet
 
 ```
-1. git push origin main
-        ↓
-2. GitHub → webhook → ngrok → Jenkins
-        ↓
-3. Jenkins clone le repo
-        ↓
-4. SonarQube analyse le code
-        ↓
-5. Quality Gate vérifie les seuils
-        ↓
-6. Docker build --no-cache les images
-        ↓
-7. Docker push vers Docker Hub
-        ↓
-8. kubectl apply -f k8s/ (via ServiceAccount token)
-        ↓
-9. kubectl rollout status (vérification)
-        ↓
-10. Email envoyé (succès ou échec)
+git push
+    ↓ webhook
+Jenkins clone
+    ↓
+SonarQube analyse
+    ↓
+Quality Gate ✅
+    ↓
+Docker build & push
+    ↓
+Terraform K8s Deploy (Minikube)
+    ↓
+Email notification
 ```
 
 ---
@@ -484,118 +524,66 @@ cd C:\Users\hp\Downloads\ngrok-v3-stable-windows-amd64
 
 ### Kubernetes
 ```bash
-# État des pods
-kubectl get pods -n mon-namespace
-
-# Logs d'un pod
-kubectl logs -n mon-namespace deployment/backend-deployment
-
-# Redémarrer un déploiement
-kubectl rollout restart deployment/frontend-deployment -n mon-namespace
-
-# Forcer le repull d'une image
-kubectl patch deployment frontend-deployment -n mon-namespace \
-  -p '{"spec":{"template":{"spec":{"containers":[{"name":"frontend","imagePullPolicy":"Always"}]}}}}'
-
-# Accès à l'application
-kubectl port-forward -n mon-namespace service/frontend-service 8080:80 --address=0.0.0.0
-kubectl port-forward -n mon-namespace service/backend-service 5001:5001 --address=0.0.0.0
-
-# Tuer tous les port-forwards
+kubectl get pods -n portfolio
+kubectl logs -n portfolio deployment/backend-deployment
+kubectl rollout restart deployment/frontend-deployment -n portfolio
+kubectl get svc -n portfolio
 pkill -f "kubectl port-forward"
+```
+
+### Terraform
+```bash
+terraform init
+terraform plan
+terraform apply -auto-approve
+terraform destroy -auto-approve
+terraform state list
+terraform output
 ```
 
 ### Docker
 ```bash
-# Voir les conteneurs
 docker ps
-
-# Logs Jenkins
 docker logs -f jenkins
-
-# Logs SonarQube
 docker logs -f sonarqube
 ```
 
-### Git
+---
+
+## 📋 Checklist redémarrage machine
+
 ```bash
-# Configurer SSH
-ssh-keygen -t ed25519 -C "votre-email@gmail.com"
-cat ~/.ssh/id_ed25519.pub  # Copier dans GitHub Settings → SSH keys
-git remote set-url origin git@github.com:USERNAME/REPO.git
+# 1. Démarrer Minikube
+minikube start --driver=docker --memory=2048
+minikube addons enable ingress
+minikube ssh -- "echo 'nameserver 8.8.8.8' | sudo tee /etc/resolv.conf"
+
+# 2. Créer namespace + ServiceAccount
+kubectl create namespace portfolio
+kubectl apply -f k8s/07-jenkins-sa.yaml
+
+# 3. Récupérer le token et mettre à jour Jenkins credentials
+kubectl get secret jenkins-deployer-token -n portfolio \
+  -o jsonpath='{.data.token}' | base64 -d
+
+# 4. Lancer ngrok (PowerShell Windows)
+.\ngrok.exe http 8082
+
+# 5. Mettre à jour webhook GitHub avec nouvelle URL ngrok
+
+# 6. Port-forwards si besoin
+kubectl port-forward -n portfolio service/frontend-service 8080:80 --address=0.0.0.0 &
+kubectl port-forward -n portfolio service/backend-service 5001:5001 --address=0.0.0.0 &
 ```
 
 ---
 
-## 🔁 Reproduire pour un autre projet
+## ⚠️ Points importants
 
-### Checklist étape par étape
-
-#### 1. Préparer le projet
-- [ ] Créer le repo GitHub
-- [ ] Configurer SSH (`ssh-keygen`)
-- [ ] Créer `sonar-project.properties`
-- [ ] Créer `Jenkinsfile`
-- [ ] Créer les fichiers `k8s/*.yaml`
-- [ ] Mettre à jour `.gitignore` (exclure `.env`, `k8s/02-secret.yaml`, `.kube/`)
-
-#### 2. Configurer Jenkins
-- [ ] Créer les credentials (`dockerhub-credentials`, `k8s-token`, `mongo-uri`)
-- [ ] Configurer SonarQube server
-- [ ] Configurer SMTP email
-- [ ] Créer le pipeline (pointer vers GitHub)
-- [ ] Activer "GitHub hook trigger"
-
-#### 3. Configurer SonarQube
-- [ ] Créer le webhook → `http://jenkins:8080/sonarqube-webhook/`
-- [ ] Générer un token pour Jenkins
-
-#### 4. Configurer Kubernetes
-- [ ] Appliquer `07-jenkins-sa.yaml`
-- [ ] Récupérer le token → ajouter dans Jenkins credentials
-- [ ] Vérifier l'IP Minikube (`minikube ip`)
-
-#### 5. Configurer GitHub Webhook
-- [ ] Lancer ngrok → `.\ngrok.exe http 8082`
-- [ ] Ajouter le webhook dans GitHub
-
-#### 6. Tester
-- [ ] `git push` → pipeline se déclenche automatiquement
-- [ ] Email reçu après le build
-- [ ] Application accessible via port-forward
-
----
-
-## ⚠️ Points importants à retenir
-
-- **Ports internes Docker** : Jenkins=`8080`, SonarQube=`9000` (pas les ports exposés)
-- **Ne jamais pusher** : `.env`, `kubeconfig`, `k8s/02-secret.yaml`
-- **IP Minikube** change si vous redémarrez → mettre à jour `K8S_URL` dans Jenkinsfile
-- **IP WSL** change à chaque redémarrage Windows → mettre à jour l'URL API frontend
-- **ngrok URL** change à chaque lancement → mettre à jour le webhook GitHub
+- **Ports internes Docker** : Jenkins=`8080`, SonarQube=`9000`
+- **Ne jamais pusher** : `.env`, `*.tfstate`, `k8s/02-secret.yaml`, `.kube/`
+- **Token K8s** expire après redémarrage → toujours mettre à jour Jenkins credentials
+- **EKS** → `terraform destroy` obligatoire après présentation (~$1/heure)
+- **ngrok URL** change à chaque lancement → mettre à jour webhook GitHub
 - **`--no-cache`** dans Docker build pour forcer la prise en compte des changements
-- **`imagePullPolicy: Always`** dans K8s pour forcer le repull des images
-
----
-
-## 🗺️ Prochaine étape — Terraform + AWS EKS
-
-```
-Terraform
-    ↓
-AWS EKS (vrai cluster Kubernetes)
-    ↓
-AWS Load Balancer (IP publique fixe)
-    ↓
-Route53 (vrai domaine)
-    ↓
-cert-manager (SSL/TLS)
-    ↓
-https://mon-portfolio.com ✅
-```
-
-Cela résoudra tous les problèmes actuels :
-- ✅ Plus d'IP qui change
-- ✅ Plus de ngrok
-- ✅ Plus de port-forward
-- ✅ Accessible depuis n'importe où
+- **Namespace portfolio** doit être créé manuellement avant le pipeline Terraform
