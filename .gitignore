@@ -23,4 +23,3 @@ k8s/02-secret.yaml
 **/.terraform/
 *.tfstate
 *.tfstate.backup
-.terraform.lock.hcl

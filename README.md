@@ -587,3 +587,34 @@ kubectl port-forward -n portfolio service/backend-service 5001:5001 --address=0.
 - **ngrok URL** change à chaque lancement → mettre à jour webhook GitHub
 - **`--no-cache`** dans Docker build pour forcer la prise en compte des changements
 - **Namespace portfolio** doit être créé manuellement avant le pipeline Terraform
+
+
+# 1. Recréer EKS (~15 min)
+cd ~/portfolio-full-stack/terraform/eks
+terraform apply -auto-approve
+
+# 2. Configurer kubectl
+aws eks update-kubeconfig --region us-east-1 --name portfolio-eks
+
+# 3. Installer Ingress Controller
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/aws/deploy.yaml
+
+# Attendre
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=120s
+
+# 4. Déployer l'app
+cd ~/portfolio-full-stack
+kubectl create namespace portfolio
+kubectl create secret generic backend-secret \
+  --from-literal=MONGO_URI="mongodb+srv://Bamba:MOT_DE_PASSE@cluster0.topbtjf.mongodb.net/portfolio_db" \
+  --namespace=portfolio
+kubectl apply -f k8s/
+
+# 5. Récupérer l'URL
+kubectl get svc -n ingress-nginx
+
+# 6. Tester
+curl http://URL_ELB/api/projects
