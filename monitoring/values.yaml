@@ -22,6 +22,8 @@ prometheus:
       limits:
         cpu: 500m
         memory: 1Gi
+  service:
+    type: LoadBalancer
 
 alertmanager:
   alertmanagerSpec:
@@ -38,6 +40,8 @@ alertmanager:
     # le routage des alertes venant d'autres namespaces (ex: portfolio)
     alertmanagerConfigMatcherStrategy:
       type: None
+  service:
+    type: LoadBalancer
 
 # Métriques par défaut activées (nodes, kube-state-metrics, etc.)
 defaultRules:
