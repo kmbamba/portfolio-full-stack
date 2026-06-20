@@ -20,22 +20,22 @@ spec:
             description: "Le pod {{ $labels.pod }} dans le namespace portfolio redémarre trop souvent."
 
         - alert: BackendDown
-          expr: up{job="backend-service"} == 0
+          expr: kube_deployment_status_replicas_available{namespace="portfolio", deployment="backend-deployment"} == 0
           for: 2m
           labels:
             severity: critical
           annotations:
             summary: "Backend inaccessible"
-            description: "Le backend {{ $labels.instance }} ne répond plus depuis 2 minutes."
+            description: "Aucun pod backend disponible dans le namespace portfolio depuis 2 minutes."
 
         - alert: FrontendDown
-          expr: up{job="frontend-service", endpoint="metrics"} == 0
+          expr: kube_deployment_status_replicas_available{namespace="portfolio", deployment="frontend-deployment"} == 0
           for: 2m
           labels:
             severity: critical
           annotations:
             summary: "Frontend inaccessible"
-            description: "Le frontend {{ $labels.instance }} ne répond plus depuis 2 minutes."
+            description: "Aucun pod frontend disponible dans le namespace portfolio depuis 2 minutes."
 
         - alert: MongoDBDown
           expr: mongodb_up == 0
