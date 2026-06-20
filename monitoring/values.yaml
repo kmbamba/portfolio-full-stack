@@ -29,6 +29,10 @@ alertmanager:
       requests:
         cpu: 50m
         memory: 128Mi
+    # Permet de découvrir les AlertmanagerConfig (CRD)
+    # dans tous les namespaces, sans label spécifique requis
+    alertmanagerConfigSelector: {}
+    alertmanagerConfigNamespaceSelector: {}
 
 # Métriques par défaut activées (nodes, kube-state-metrics, etc.)
 defaultRules:

@@ -1,0 +1,65 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: portfolio-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: portfolio.rules
+      rules:
+
+        - alert: PodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total{namespace="portfolio"}[15m]) > 3
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod en CrashLoopBackOff"
+            description: "Le pod {{ $labels.pod }} dans le namespace portfolio redémarre trop souvent."
+
+        - alert: BackendDown
+          expr: up{job="backend-service"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Backend inaccessible"
+            description: "Le backend {{ $labels.instance }} ne répond plus depuis 2 minutes."
+
+        - alert: FrontendDown
+          expr: up{job="frontend-service", endpoint="metrics"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Frontend inaccessible"
+            description: "Le frontend {{ $labels.instance }} ne répond plus depuis 2 minutes."
+
+        - alert: MongoDBDown
+          expr: mongodb_up == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "MongoDB Atlas inaccessible"
+            description: "L'exporter MongoDB ne peut plus se connecter à Atlas."
+
+        - alert: HighErrorRate
+          expr: sum(rate(portfolio_backend_http_requests_total{status=~"5.."}[5m])) > 0.1
+          for: 3m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Taux d'erreurs 5xx élevé sur le backend"
+            description: "Plus de 0.1 erreur 5xx/seconde détectée sur l'API portfolio."
+
+        - alert: HighMemoryUsage
+          expr: sum(container_memory_usage_bytes{namespace="portfolio"}) by (pod) / (1024*1024) > 200
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Mémoire élevée"
+            description: "Le pod {{ $labels.pod }} utilise plus de 200Mi de RAM."

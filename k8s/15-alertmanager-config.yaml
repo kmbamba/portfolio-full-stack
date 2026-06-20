@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: portfolio-email-alerts
+  namespace: monitoring
+  labels:
+    alertmanagerConfig: portfolio
+spec:
+  route:
+    receiver: email-notifications
+    groupBy: ["alertname", "severity"]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 1h
+  receivers:
+    - name: email-notifications
+      emailConfigs:
+        - to: kmbamba567@gmail.com
+          from: kmbamba567@gmail.com
+          smarthost: smtp.gmail.com:587
+          authUsername: kmbamba567@gmail.com
+          authPassword:
+            name: alertmanager-smtp
+            key: password
+          requireTLS: true
+          sendResolved: true
