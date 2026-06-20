@@ -1,0 +1,189 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  backend-dashboard.json: |
+    {
+      "title": "Portfolio - Backend",
+      "uid": "portfolio-backend",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "10s",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Requêtes HTTP / seconde",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(rate(portfolio_backend_http_requests_total[1m])) by (route, status)",
+              "legendFormat": "{{route}} - {{status}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Temps de réponse moyen (s)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "rate(portfolio_backend_http_request_duration_seconds_sum[1m]) / rate(portfolio_backend_http_request_duration_seconds_count[1m])",
+              "legendFormat": "{{route}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Total requêtes par statut",
+          "type": "piechart",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "expr": "sum(portfolio_backend_http_requests_total) by (status)",
+              "legendFormat": "{{status}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Pods Backend Running",
+          "type": "stat",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "targets": [
+            {
+              "expr": "count(up{job=\"backend-service\"} == 1)"
+            }
+          ]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  frontend-dashboard.json: |
+    {
+      "title": "Portfolio - Frontend",
+      "uid": "portfolio-frontend",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "10s",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Requêtes Nginx / seconde",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(rate(nginx_http_requests_total[1m]))",
+              "legendFormat": "requêtes/s"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Connexions actives",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "nginx_connections_active",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Connexions acceptées vs gérées",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "expr": "nginx_connections_accepted",
+              "legendFormat": "acceptées - {{instance}}"
+            },
+            {
+              "expr": "nginx_connections_handled",
+              "legendFormat": "gérées - {{instance}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Pods Frontend Running",
+          "type": "stat",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "targets": [
+            {
+              "expr": "count(up{job=\"frontend-service\", endpoint=\"metrics\"} == 1)"
+            }
+          ]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  mongodb-dashboard.json: |
+    {
+      "title": "Portfolio - MongoDB Atlas",
+      "uid": "portfolio-mongodb",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "10s",
+      "panels": [
+        {
+          "id": 1,
+          "title": "MongoDB disponible",
+          "type": "stat",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "mongodb_up"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Connexions courantes",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "mongodb_connections{state=\"current\"}",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Opérations / seconde",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "expr": "rate(mongodb_op_counters_total[1m])",
+              "legendFormat": "{{type}}"
+            }
+          ]
+        }
+      ]
+    }
