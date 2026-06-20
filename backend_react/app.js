@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const promClient = require("prom-client");
 const connectDB = require("./config/connectdb");
 const projectRoutes = require("./routes/projectRoutes");
 
@@ -15,10 +16,48 @@ if (process.env.NODE_ENV !== 'test') {
 // ── Initialiser Express ──
 const app = express();
 
+// ── Prometheus : Configuration des métriques ──
+const register = new promClient.Registry();
+promClient.collectDefaultMetrics({ register, prefix: 'portfolio_backend_' });
+
+// Compteur de requêtes HTTP par route/méthode/statut
+const httpRequestsTotal = new promClient.Counter({
+  name: 'portfolio_backend_http_requests_total',
+  help: 'Nombre total de requêtes HTTP',
+  labelNames: ['method', 'route', 'status'],
+  registers: [register],
+});
+
+// Histogramme du temps de réponse
+const httpRequestDuration = new promClient.Histogram({
+  name: 'portfolio_backend_http_request_duration_seconds',
+  help: 'Durée des requêtes HTTP en secondes',
+  labelNames: ['method', 'route', 'status'],
+  buckets: [0.05, 0.1, 0.3, 0.5, 1, 2, 5],
+  registers: [register],
+});
+
+// Middleware pour mesurer chaque requête
+app.use((req, res, next) => {
+  const end = httpRequestDuration.startTimer();
+  res.on('finish', () => {
+    const route = req.route ? req.route.path : req.path;
+    httpRequestsTotal.inc({ method: req.method, route, status: res.statusCode });
+    end({ method: req.method, route, status: res.statusCode });
+  });
+  next();
+});
+
 // ── Middlewares ──
-app.use(cors()); // Activer CORS pour toutes les requêtes
-app.use(express.json({ limit: '50mb' }));         // Parser les requêtes JSON (limite augmentée pour les images)
-app.use(express.urlencoded({ extended: false, limit: '50mb' })); // Parser les données URL encodées
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+
+// ── Endpoint /metrics pour Prometheus ──
+app.get("/metrics", async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
 
 // ── Routes ──
 app.use("/api/projects", projectRoutes);
@@ -34,6 +73,7 @@ app.get("/", (req, res) => {
       getProjectById:   "GET    /api/projects/:id",
       updateProject:    "PUT    /api/projects/:id",
       deleteProject:    "DELETE /api/projects/:id",
+      metrics:          "GET    /metrics",
     },
   });
 });
