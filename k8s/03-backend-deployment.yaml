@@ -38,6 +38,8 @@ kind: Service
 metadata:
   name: backend-service
   namespace: portfolio
+  labels:
+    app: backend
 spec:
   selector:
     app: backend
