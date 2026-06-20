@@ -33,6 +33,11 @@ alertmanager:
     # dans tous les namespaces, sans label spécifique requis
     alertmanagerConfigSelector: {}
     alertmanagerConfigNamespaceSelector: {}
+    # Empêche l'opérateur d'injecter automatiquement un matcher
+    # "namespace=<namespace de l'AlertmanagerConfig>" qui bloquerait
+    # le routage des alertes venant d'autres namespaces (ex: portfolio)
+    alertmanagerConfigMatcherStrategy:
+      type: None
 
 # Métriques par défaut activées (nodes, kube-state-metrics, etc.)
 defaultRules:
