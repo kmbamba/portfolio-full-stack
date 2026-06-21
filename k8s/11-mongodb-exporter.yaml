@@ -20,7 +20,7 @@ spec:
         image: percona/mongodb_exporter:0.40
         args:
           - --mongodb.uri=$(MONGO_URI)
-          - --collect-all
+          - --mongodb.direct-connect=false
         envFrom:
           - secretRef:
               name: backend-secret
